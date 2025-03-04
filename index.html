@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Analysis</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Chess Game Analysis</h1>
+        <form id="usernameForm">
+            <input type="text" id="usernameInput" placeholder="Enter Chess.com username" required>
+            <button type="submit">Analyze</button>
+        </form>
+        <div id="results">
+            <h2>Analysis Results</h2>
+            <canvas id="analysisGraph" width="800" height="400"></canvas>
+            <div id="blunders"></div>
+            <div id="mistakes"></div>
+            <div id="inaccuracies"></div>
+            <div id="heatmap"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 240, 240, 240;
+  --background-end-rgb: 255, 255, 255;
+  --primary-color: #1a56db;
+  --secondary-color: #7e3af2;
+  --accent-color: #0694a2;
+  --warning-color: #ff5a1f;
+  --success-color: #0e9f6e;
+  --error-color: #e02424;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+.chess-board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 1/1;
+  border: 2px solid #333;
+}
+
+.chess-square {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.chess-square-light {
+  background-color: #f0d9b5;
+}
+
+.chess-square-dark {
+  background-color: #b58863;
+}
+
+.playstyle-card {
+  @apply p-6 rounded-lg shadow-md border border-gray-200 transition-all duration-300;
+}
+
+.playstyle-card:hover {
+  @apply shadow-lg transform translate-y-[-5px];
+}
+
+.tactical-attacker {
+  @apply bg-gradient-to-br from-red-50 to-red-100 border-red-200;
+}
+
+.positional-player {
+  @apply bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200;
+}
+
+.endgame-specialist {
+  @apply bg-gradient-to-br from-green-50 to-green-100 border-green-200;
+}
+
+.blitz-speedster {
+  @apply bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200;
+}
+
+.defensive-player {
+  @apply bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200;
+}
+
+.unstable-player {
+  @apply bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200;
+}
+
+.metric-chart {
+  @apply p-4 rounded-lg shadow-sm bg-white border border-gray-100;
+}
+
+.data-visualization {
+  @apply rounded-lg overflow-hidden shadow-md;
+}
+
+.analysis-section {
+  @apply py-12 px-4 sm:px-6 lg:px-8;
+}
+
+.section-heading {
+  @apply text-3xl font-bold text-center mb-12 text-gray-800;
+}
+
+.feature-icon {
+  @apply w-12 h-12 mx-auto text-primary-600 mb-4;
+}
+
+.hero-section {
+  @apply py-20 bg-gradient-to-br from-blue-800 to-blue-900 text-white;
+}
+
+.hero-title {
+  @apply text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight;
+}
+
+.hero-subtitle {
+  @apply text-xl md:text-2xl mb-8 font-light opacity-90 max-w-2xl mx-auto;
+}
+
+.cta-button {
+  @apply px-8 py-3 rounded-lg text-lg font-semibold shadow-lg transition-all duration-300;
+}
+
+.primary-cta {
+  @apply bg-blue-500 hover:bg-blue-600 text-white;
+}
+
+.secondary-cta {
+  @apply bg-white hover:bg-gray-100 text-blue-900;
+}
