@@ -80,31 +80,69 @@ init_db()
 
 def get_all_games(username, time_filter='all'):
     """Get all games from Chess.com API with time filtering"""
+    print(f"\n===== FETCHING GAMES FOR {username} WITH FILTER {time_filter} =====")
+    
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
     
     # First check if the player exists
     player_url = f"https://api.chess.com/pub/player/{username}"
-    player_response = requests.get(player_url, headers=headers)
+    print(f"Checking if player exists: {player_url}")
     
-    if player_response.status_code != 200:
-        print(f"Player {username} not found: {player_response.status_code}")
+    try:
+        player_response = requests.get(player_url, headers=headers)
+        print(f"Player lookup status code: {player_response.status_code}")
+        
+        if player_response.status_code != 200:
+            print(f"Player {username} not found: {player_response.status_code}")
+            return None
+    except Exception as e:
+        print(f"Error connecting to Chess.com API (player lookup): {e}")
         return None
     
     # Try to get archives (list of monthly game collections)
     archives_url = f"https://api.chess.com/pub/player/{username}/games/archives"
-    archives_response = requests.get(archives_url, headers=headers)
+    print(f"Fetching archives from: {archives_url}")
     
-    if archives_response.status_code != 200:
-        print(f"Failed to get archives: {archives_response.status_code}")
+    try:
+        archives_response = requests.get(archives_url, headers=headers)
+        print(f"Archives lookup status code: {archives_response.status_code}")
+        
+        if archives_response.status_code != 200:
+            print(f"Failed to get archives: {archives_response.status_code}")
+            return None
+    except Exception as e:
+        print(f"Error connecting to Chess.com API (archives): {e}")
         return None
     
-    archives = archives_response.json().get('archives', [])
+    # Process the archives response
+    try:
+        archives_data = archives_response.json()
+        print(f"Archives response type: {type(archives_data)}")
+        
+        # Handle different response formats
+        if isinstance(archives_data, list):
+            # If API returns archives array directly
+            archives = archives_data
+        elif isinstance(archives_data, dict) and 'archives' in archives_data:
+            # If API returns object with archives property
+            archives = archives_data['archives']
+        else:
+            # Log the unexpected format for debugging
+            print(f"Unexpected archives response format: {type(archives_data)}")
+            print(f"Response content sample: {str(archives_data)[:200]}...")
+            archives = []
+            
+        print(f"Found {len(archives)} archive URLs")
+    except Exception as e:
+        print(f"Error parsing archives response: {e}")
+        print(f"Raw response: {archives_response.text[:200]}...")
+        archives = []
     
     if not archives:
         print("No archives found")
-        return None
+        return []
     
     # Calculate date threshold based on time_filter
     now = datetime.now()
@@ -151,15 +189,26 @@ def get_all_games(username, time_filter='all'):
                 pass
         
         print(f"Processing archive: {archive_url}")
-        response = requests.get(archive_url, headers=headers)
-        if response.status_code != 200:
-            print(f"Failed to get games from {archive_url}: {response.status_code}")
-            continue
-        
-        games = response.json().get('games', [])
-        
-        if not games:
-            print(f"No games found in archive {archive_url}")
+        try:
+            response = requests.get(archive_url, headers=headers)
+            if response.status_code != 200:
+                print(f"Failed to get games from {archive_url}: {response.status_code}")
+                continue
+            
+            try:
+                archive_data = response.json()
+                games = archive_data.get('games', [])
+                print(f"Found {len(games)} games in archive")
+                
+                if not games:
+                    print(f"No games found in archive {archive_url}")
+                    continue
+            except Exception as e:
+                print(f"Error parsing games from archive {archive_url}: {e}")
+                print(f"Response: {response.text[:200]}...")
+                continue
+        except Exception as e:
+            print(f"Error connecting to archive {archive_url}: {e}")
             continue
         
         # Format the games as needed
@@ -216,9 +265,19 @@ def get_recent_games(username):
 
 def analyze_opening_stats(games):
     """Analyze opening statistics from a list of games"""
+    if not games:
+        print("No games provided for opening stats analysis")
+        return []
+        
     opening_stats = defaultdict(lambda: {'total': 0, 'wins': 0, 'losses': 0, 'draws': 0})
     
+    print(f"Analyzing opening stats for {len(games)} games")
+    
     for game in games:
+        if not isinstance(game, dict):
+            print(f"Warning: Expected game to be a dictionary, got {type(game)}")
+            continue
+            
         opening = game.get('opening')
         if not opening:
             opening = "Unknown Opening"
@@ -248,6 +307,7 @@ def analyze_opening_stats(games):
             })
     
     # Sort by most played
+    print(f"Found {len(result)} openings with at least 3 games")
     return sorted(result, key=lambda x: x['total'], reverse=True)
 
 def determine_player_profile(analysis_data):
@@ -478,12 +538,35 @@ def analyze_games():
         # Try to get games
         games = get_all_games(username, time_filter)
         
-        if not games:
+        if not games or len(games) == 0:
             print(f"No games found for {username}")
             return jsonify({
-                'status': 'error',
-                'message': f'No games found for user {username}. Please check the username and try again.'
-            }), 400
+                'status': 'success',  # Return success to avoid error alert
+                'username': username,
+                'evaluations': [],
+                'blunders': [],
+                'mistakes': [],
+                'inaccuracies': [],
+                'opening_stats': [],
+                'player_profile': {
+                    'primary_profile': 'Unknown',
+                    'secondary_profile': 'Unknown',
+                    'description': f'Not enough games found for {username}. Please check the username and try a different time filter.',
+                    'confidence': 0,
+                    'profile_scores': {}
+                },
+                'metrics': {
+                    'blunder_rate': 0,
+                    'positional_score': 0,
+                    'tactical_score': 0,
+                    'endgame_score': 0,
+                    'defensive_score': 0,
+                    'evaluation_variance': 0,
+                    'avg_move_time': 0
+                },
+                'games_analyzed': 0,
+                'total_games': 0
+            })
 
         # Get opening statistics
         opening_stats = analyze_opening_stats(games)
@@ -540,7 +623,8 @@ def analyze_games():
         
         print(f"Analysis complete: {analyzed_count} games analyzed")
         
-        return jsonify({
+        # Add CORS headers to ensure the response can be processed by the frontend
+        response = jsonify({
             'status': 'success',
             'username': username,
             'evaluations': all_evaluations[:100],  # Limit to 100 evaluations for frontend performance
@@ -553,6 +637,10 @@ def analyze_games():
             'games_analyzed': analyzed_count,
             'total_games': len(games)
         })
+        
+        # Log the response being sent
+        print(f"Sending response with {analyzed_count} analyzed games")
+        return response
 
     except Exception as e:
         print(f"Error during analysis: {str(e)}")
@@ -578,15 +666,15 @@ def get_playstyle():
     
     if not games:
         return jsonify({
-            'status': 'error',
-            'message': f'No games found for user {username}'
-        }), 404
+            'status': 'success',
+            'username': username,
+            'total_games': 0,
+            'opening_stats': [],
+            'message': f'No games found for user {username}.'
+        })
     
     # Get opening statistics
     opening_stats = analyze_opening_stats(games)
-    
-    # For playstyle, we'll just use a simplified profile determination
-    # based on opening choices and results
     
     # Calculate win rates by color
     white_games = [g for g in games if g.get('player_color') == 'white']

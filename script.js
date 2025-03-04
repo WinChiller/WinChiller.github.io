@@ -61,6 +61,7 @@ document.getElementById('usernameForm').addEventListener('submit', async (e) => 
     spinner.style.display = 'block';
     
     try {
+        console.log('Fetching data from API...');
         const response = await fetch('http://127.0.0.1:5000/analyze', {
             method: 'POST',
             headers: {
@@ -72,6 +73,10 @@ document.getElementById('usernameForm').addEventListener('submit', async (e) => 
             })
         });
 
+        if (!response.ok) {
+            throw new Error(`API response error: ${response.status} ${response.statusText}`);
+        }
+
         const data = await response.json();
         console.log('Received response:', data);
         
@@ -79,15 +84,12 @@ document.getElementById('usernameForm').addEventListener('submit', async (e) => 
         spinner.style.display = 'none';
 
         if (data.status === 'error') {
-            alert(data.message);
+            alert(data.message || 'An error occurred');
             return;
         }
 
-        if (data.evaluations && data.evaluations.length > 0) {
-            displayResults(data);
-        } else {
-            alert('No analysis data received');
-        }
+        // Display results regardless of evaluations presence
+        displayResults(data);
     } catch (error) {
         console.error('Error:', error);
         // Hide loading spinner on error
@@ -97,20 +99,22 @@ document.getElementById('usernameForm').addEventListener('submit', async (e) => 
 });
 
 function displayResults(data) {
+    console.log('Displaying results with data:', data);
+    
     // Display opening statistics
-    displayOpeningStats(data.opening_stats);
+    displayOpeningStats(data.opening_stats || []);
     
     // Display player profile
-    displayPlayerProfile(data.player_profile, data.metrics);
+    displayPlayerProfile(data.player_profile || null, data.metrics || {});
     
     // Display move analysis
     const blunders = document.getElementById('blunders');
     const mistakes = document.getElementById('mistakes');
     const inaccuracies = document.getElementById('inaccuracies');
 
-    blunders.innerHTML = `<h3>Blunders (${data.blunders.length})</h3><ul>${data.blunders.map(move => `<li>${move}</li>`).join('')}</ul>`;
-    mistakes.innerHTML = `<h3>Mistakes (${data.mistakes.length})</h3><ul>${data.mistakes.map(move => `<li>${move}</li>`).join('')}</ul>`;
-    inaccuracies.innerHTML = `<h3>Inaccuracies (${data.inaccuracies.length})</h3><ul>${data.inaccuracies.map(move => `<li>${move}</li>`).join('')}</ul>`;
+    blunders.innerHTML = `<h3>Blunders (${data.blunders ? data.blunders.length : 0})</h3><ul>${data.blunders ? data.blunders.map(move => `<li>${move}</li>`).join('') : ''}</ul>`;
+    mistakes.innerHTML = `<h3>Mistakes (${data.mistakes ? data.mistakes.length : 0})</h3><ul>${data.mistakes ? data.mistakes.map(move => `<li>${move}</li>`).join('') : ''}</ul>`;
+    inaccuracies.innerHTML = `<h3>Inaccuracies (${data.inaccuracies ? data.inaccuracies.length : 0})</h3><ul>${data.inaccuracies ? data.inaccuracies.map(move => `<li>${move}</li>`).join('') : ''}</ul>`;
 
     // Display evaluation graph
     if (data.evaluations && data.evaluations.length > 0) {
@@ -144,6 +148,15 @@ function displayResults(data) {
                 }
             }
         });
+    } else {
+        // No evaluation data
+        const canvas = document.getElementById('analysisGraph');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText('No evaluation data available', canvas.width/2, canvas.height/2);
     }
 
     // Create heatmap
@@ -170,6 +183,21 @@ function displayResults(data) {
             .attr('height', d => Math.min(90, Math.abs(d.score) / 10))
             .attr('fill', d => d.score > 0 ? '#4CAF50' : '#f44336')
             .attr('opacity', 0.7);
+    } else {
+        // No heatmap data
+        const heatmap = d3.select('#heatmap');
+        heatmap.selectAll('*').remove();
+        
+        const svg = heatmap.append('svg')
+            .attr('width', 800)
+            .attr('height', 100);
+            
+        svg.append('text')
+            .attr('x', 400)
+            .attr('y', 50)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#666')
+            .text('No heatmap data available');
     }
 }
 
@@ -222,30 +250,30 @@ function displayPlayerProfile(profile, metrics) {
             <div class="metrics-container">
                 <div class="metric">
                     <div class="metric-label">Blunder Rate</div>
-                    <div class="metric-value">${Math.round(metrics.blunder_rate * 100)}%</div>
+                    <div class="metric-value">${metrics && 'blunder_rate' in metrics ? Math.round(metrics.blunder_rate * 100) : 0}%</div>
                 </div>
                 <div class="metric">
                     <div class="metric-label">Tactical</div>
                     <div class="metric-bar">
-                        <div class="metric-fill" style="width: ${Math.min(100, metrics.tactical_score * 100)}%"></div>
+                        <div class="metric-fill" style="width: ${metrics && 'tactical_score' in metrics ? Math.min(100, metrics.tactical_score * 100) : 0}%"></div>
                     </div>
                 </div>
                 <div class="metric">
                     <div class="metric-label">Positional</div>
                     <div class="metric-bar">
-                        <div class="metric-fill" style="width: ${Math.min(100, metrics.positional_score * 100)}%"></div>
+                        <div class="metric-fill" style="width: ${metrics && 'positional_score' in metrics ? Math.min(100, metrics.positional_score * 100) : 0}%"></div>
                     </div>
                 </div>
                 <div class="metric">
                     <div class="metric-label">Defensive</div>
                     <div class="metric-bar">
-                        <div class="metric-fill" style="width: ${Math.min(100, metrics.defensive_score * 100)}%"></div>
+                        <div class="metric-fill" style="width: ${metrics && 'defensive_score' in metrics ? Math.min(100, metrics.defensive_score * 100) : 0}%"></div>
                     </div>
                 </div>
                 <div class="metric">
                     <div class="metric-label">Endgame</div>
                     <div class="metric-bar">
-                        <div class="metric-fill" style="width: ${Math.min(100, metrics.endgame_score * 100)}%"></div>
+                        <div class="metric-fill" style="width: ${metrics && 'endgame_score' in metrics ? Math.min(100, metrics.endgame_score * 100) : 0}%"></div>
                     </div>
                 </div>
             </div>
